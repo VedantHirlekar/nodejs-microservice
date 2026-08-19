@@ -1,0 +1,205 @@
+services:
+
+
+  
+
+  mysql:
+    image: mysql:8.4
+    container_name: microservices-mysql
+
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    networks:
+      - microservices-network
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  user-service:
+
+    build:
+      context: ./user-service
+
+    container_name: user-service
+
+    ports:
+      - "3001:3001"
+
+    environment:
+      PORT: 3001
+
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: user_db
+      DB_PORT: 3306
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - microservices-network
+
+
+  product-service:
+
+    build:
+      context: ./product-service
+
+    container_name: product-service
+
+    ports:
+      - "3002:3002"
+
+    environment:
+      PORT: 3002
+
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: product_db
+      DB_PORT: 3306
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - microservices-network
+
+
+  order-service:
+
+    build:
+      context: ./order-service
+
+    container_name: order-service
+
+    ports:
+      - "3003:3003"
+
+    environment:
+      PORT: 3003
+
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: order_db
+      DB_PORT: 3306
+
+      USER_SERVICE_URL: http://user-service:3001
+      PRODUCT_SERVICE_URL: http://product-service:3002
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+      user-service:
+        condition: service_started
+
+      product-service:
+        condition: service_started
+
+    networks:
+      - microservices-network
+
+
+  payment-service:
+
+    build:
+      context: ./payment-service
+
+    container_name: payment-service
+
+    ports:
+      - "3004:3004"
+
+    environment:
+      PORT: 3004
+
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: payment_db
+      DB_PORT: 3306
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - microservices-network
+
+
+  notification-service:
+
+    build:
+      context: ./notification-service
+
+    container_name: notification-service
+
+    ports:
+      - "3005:3005"
+
+    environment:
+      PORT: 3005
+
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: notification_db
+      DB_PORT: 3306
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - microservices-network
+
+  
+
+  nginx:
+  image: nginx:alpine
+
+  container_name: nginx-gateway
+
+  ports:
+    - "80:80"
+
+  volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+  depends_on:
+    - user-service
+    - product-service
+    - order-service
+    - payment-service
+    - notification-service
+
+  networks:
+    - microservices-network
+
+
+volumes:
+
+  mysql_data:
+
+
+networks:
+
+  microservices-network:
+    driver: bridge
