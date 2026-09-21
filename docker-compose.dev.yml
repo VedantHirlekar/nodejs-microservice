@@ -1,8 +1,9 @@
 services:
 
   user-service:
-    
-    image: 206003749282.dkr.ecr.eu-north-1.amazonaws.com/user-service:v1
+    build:
+      context: ./user-service
+
     container_name: user-service
 
     env_file:
@@ -16,7 +17,9 @@ services:
 
 
   product-service:
-    image: 206003749282.dkr.ecr.eu-north-1.amazonaws.com/product-service:v1
+    build:
+      context: ./product-service
+
     container_name: product-service
 
     env_file:
@@ -30,7 +33,8 @@ services:
 
 
   order-service:
-    image: 206003749282.dkr.ecr.eu-north-1.amazonaws.com/order-service:v1
+    build:
+      context: ./order-service
 
     container_name: order-service
 
@@ -49,7 +53,8 @@ services:
 
 
   payment-service:
-    image: 206003749282.dkr.ecr.eu-north-1.amazonaws.com/payment-service:v1
+    build:
+      context: ./payment-service
 
     container_name: payment-service
 
@@ -64,7 +69,8 @@ services:
 
 
   notification-service:
-    image: 206003749282.dkr.ecr.eu-north-1.amazonaws.com/notification-service:v1
+    build:
+      context: ./notification-service
 
     container_name: notification-service
 
