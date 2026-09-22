@@ -74,25 +74,25 @@ pipeline {
                 script {
 
                     def commandId = sh(
-                        script: """
+                        script: '''
                             aws ssm send-command \
                             --region ${AWS_REGION} \
                             --instance-ids i-0609f3bfe8e4522cd \
                             --document-name AWS-RunShellScript \
                             --parameters 'commands=[
                                 "cd /home/ssm-user/nodejs-microservice",
-                                "PREVIOUS_TAG=\\$(grep -A1 \\"^  user-service:\\" docker-compose.yml | grep image | sed \\"s/.*user-service:\\(.*\\)/\\\\1/\\")",
-                                "echo Previous version: \\$PREVIOUS_TAG",
+                                "PREVIOUS_TAG=$(grep -A1 \\"^  user-service:\\" docker-compose.yml | grep image | sed \\"s/.*user-service:\\(.*\\)/\\\\1/\\")",
+                                "echo Previous version: $PREVIOUS_TAG",
                                 "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}",
                                 "docker pull ${ECR_REGISTRY}/user-service:${IMAGE_TAG}",
                                 "sed -i \\"/^[[:space:]]*user-service:/,/^[[:space:]]*[a-zA-Z].*:/ s#user-service:v[0-9]*#user-service:${IMAGE_TAG}#\\" docker-compose.yml",
                                 "docker compose up -d user-service",
                                 "sleep 10",
-                                "if curl -fsS http://localhost/users/health; then echo Health check PASSED; else sed -i \\"/^[[:space:]]*user-service:/,/^[[:space:]]*[a-zA-Z].*:/ s#user-service:${IMAGE_TAG}#user-service:\\$PREVIOUS_TAG#\\" docker-compose.yml; docker compose up -d user-service; echo Rollback completed; exit 1; fi"
+                                "if curl -fsS http://localhost/users/health; then echo Health check PASSED; else sed -i \\"/^[[:space:]]*user-service:/,/^[[:space:]]*[a-zA-Z].*:/ s#user-service:${IMAGE_TAG}#user-service:$PREVIOUS_TAG#\\" docker-compose.yml; docker compose up -d user-service; echo Rollback completed; exit 1; fi"
                             ]' \
                             --query 'Command.CommandId' \
                             --output text
-                        """,
+                        ''',
                         returnStdout: true
                     ).trim()
 
@@ -119,6 +119,7 @@ pipeline {
     }
 
     post {
+
         success {
             echo "All 5 images pushed successfully with tag ${IMAGE_TAG}"
         }
