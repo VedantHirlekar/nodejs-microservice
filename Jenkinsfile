@@ -42,7 +42,7 @@ pipeline {
 
                     whoami
                     docker --version
-                    docker compose version
+                    
                     aws --version
                     git --version
                 '''
