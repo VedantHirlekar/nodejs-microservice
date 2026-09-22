@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -67,6 +66,48 @@ pipeline {
 
                     docker push ${ECR_REGISTRY}/notification-service:${IMAGE_TAG}
                 '''
+            }
+        }
+
+        stage('Deploy user-service') {
+            steps {
+                script {
+
+                    def commandId = sh(
+                        script: """
+                            aws ssm send-command \
+                            --region ${AWS_REGION} \
+                            --instance-ids i-0609f3bfe8e4522cd \
+                            --document-name AWS-RunShellScript \
+                            --parameters 'commands=[
+                                "cd /home/ssm-user/nodejs-microservice",
+                                "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}",
+                                "docker pull ${ECR_REGISTRY}/user-service:${IMAGE_TAG}",
+                                "sed -i \\\\\\"s#user-service:v[0-9]*#user-service:${IMAGE_TAG}#\\\\\\" docker-compose.yml",
+                                "docker compose up -d user-service"
+                            ]' \
+                            --query 'Command.CommandId' \
+                            --output text
+                        """,
+                        returnStdout: true
+                    ).trim()
+
+                    echo "SSM Command ID: ${commandId}"
+
+                    sh """
+                        aws ssm wait command-executed \
+                        --region ${AWS_REGION} \
+                        --command-id ${commandId} \
+                        --instance-id i-0609f3bfe8e4522cd
+                    """
+
+                    sh """
+                        aws ssm get-command-invocation \
+                        --region ${AWS_REGION} \
+                        --command-id ${commandId} \
+                        --instance-id i-0609f3bfe8e4522cd
+                    """
+                }
             }
         }
     }
